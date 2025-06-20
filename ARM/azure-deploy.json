@@ -1,0 +1,136 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "environmentName": {
+            "type": "string",
+            "defaultValue": "thepilot-env",
+            "metadata": {
+                "description": "Name of the Container Apps Environment"
+            }
+        },
+        "appName": {
+            "type": "string",
+            "defaultValue": "thepilot-game",
+            "metadata": {
+                "description": "Name of the Container App"
+            }
+        },
+        "location": {
+            "type": "string",
+            "defaultValue": "[resourceGroup().location]",
+            "metadata": {
+                "description": "Location for all resources"
+            }
+        },
+        "githubRepo": {
+            "type": "string",
+            "defaultValue": "https://raw.githubusercontent.com/MariuszFerdyn/ThePilot-Scramble-retro-game-by-AI/refs/heads/main",
+            "metadata": {
+                "description": "GitHub repository URL for game files"
+            }
+        }
+    },
+    "variables": {
+        "containerAppName": "[parameters('appName')]",
+        "startupCommand": "[concat('mkdir /app && wget -O /app/server.js ', parameters('githubRepo'), '/server.js && wget -O /app/package.json ', parameters('githubRepo'), '/package.json && mkdir -p /app/public && wget -O /app/public/index.html ', parameters('githubRepo'), '/index.html && cd /app && npm install && node server.js')]"
+    },
+    "resources": [
+        {
+            "type": "Microsoft.App/managedEnvironments",
+            "apiVersion": "2023-05-01",
+            "name": "[parameters('environmentName')]",
+            "location": "[parameters('location')]",
+            "sku": {
+                "name": "Consumption"
+            },
+            "properties": {
+                "zoneRedundant": false
+            }
+        },
+        {
+            "type": "Microsoft.App/containerApps",
+            "apiVersion": "2023-05-01",
+            "name": "[variables('containerAppName')]",
+            "location": "[parameters('location')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.App/managedEnvironments', parameters('environmentName'))]"
+            ],
+            "properties": {
+                "managedEnvironmentId": "[resourceId('Microsoft.App/managedEnvironments', parameters('environmentName'))]",
+                "configuration": {
+                    "activeRevisionsMode": "Single",
+                    "ingress": {
+                        "external": true,
+                        "targetPort": 3000,
+                        "transport": "http",
+                        "allowInsecure": true,
+                        "traffic": [
+                            {
+                                "weight": 100,
+                                "latestRevision": true
+                            }
+                        ]
+                    }
+                },
+                "template": {
+                    "containers": [
+                        {
+                            "name": "thepilot-server",
+                            "image": "node:18-alpine",
+                            "command": [
+                                "/bin/sh",
+                                "-c"
+                            ],
+                            "args": [
+                                "[variables('startupCommand')]"
+                            ],
+                            "resources": {
+                                "cpu": "0.5",
+                                "memory": "1Gi"
+                            },
+                            "env": [
+                                {
+                                    "name": "PORT",
+                                    "value": "3000"
+                                },
+                                {
+                                    "name": "NODE_ENV",
+                                    "value": "production"
+                                }
+                            ]
+                        }
+                    ],
+                    "scale": {
+                        "minReplicas": 1,
+                        "maxReplicas": 5,
+                        "rules": [
+                            {
+                                "name": "http-rule",
+                                "http": {
+                                    "metadata": {
+                                        "concurrentRequests": "10"
+                                    }
+                                }
+                            }
+                        ]
+                    }
+                }
+            }
+        }
+    ],
+    "outputs": {
+        "applicationUrl": {
+            "type": "string",
+            "value": "[concat('https://', variables('containerAppName'), '.', reference(resourceId('Microsoft.App/managedEnvironments', parameters('environmentName'))).defaultDomain)]"
+        },
+        "gameUrl": {
+            "type": "string",
+            "value": "[concat('Play at: https://', variables('containerAppName'), '.', reference(resourceId('Microsoft.App/managedEnvironments', parameters('environmentName'))).defaultDomain)]"
+        },
+        "websocketUrl": {
+            "type": "string",
+            "value": "[concat('wss://', variables('containerAppName'), '.', reference(resourceId('Microsoft.App/managedEnvironments', parameters('environmentName'))).defaultDomain)]"
+        }
+    }
+}

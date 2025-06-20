@@ -875,8 +875,24 @@
             // Set dynamic WebSocket URL based on current host
             const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
             const host = window.location.hostname;
-            const port = window.location.port || '3000';
-            const defaultServerUrl = `${protocol}//${host}:${port}`;
+            
+            // Use current port if it exists, otherwise use standard ports
+            let port = window.location.port;
+            if (!port) {
+                // If no port specified, use standard ports
+                port = window.location.protocol === 'https:' ? '443' : '80';
+            }
+            
+            // For Azure Container Apps, don't include standard ports in URL
+            let defaultServerUrl;
+            if ((port === '443' && window.location.protocol === 'https:') || 
+                (port === '80' && window.location.protocol === 'http:')) {
+                // Standard ports - don't include in URL
+                defaultServerUrl = `${protocol}//${host}`;
+            } else {
+                // Custom ports - include in URL
+                defaultServerUrl = `${protocol}//${host}:${port}`;
+            }
             
             document.getElementById('serverUrl').value = defaultServerUrl;
             document.getElementById('serverUrl').placeholder = defaultServerUrl;
