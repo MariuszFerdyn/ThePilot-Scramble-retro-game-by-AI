@@ -150,6 +150,15 @@ class Explosion {
 
 // Collision detection
 function checkCollision(obj1, obj2) {
+    // Safety check for undefined objects
+    if (!obj1 || !obj2 || 
+        typeof obj1.x === 'undefined' || typeof obj1.y === 'undefined' || 
+        typeof obj2.x === 'undefined' || typeof obj2.y === 'undefined' ||
+        typeof obj1.width === 'undefined' || typeof obj1.height === 'undefined' ||
+        typeof obj2.width === 'undefined' || typeof obj2.height === 'undefined') {
+        return false;
+    }
+    
     return obj1.x < obj2.x + obj2.width &&
            obj1.x + obj1.width > obj2.x &&
            obj1.y < obj2.y + obj2.height &&
@@ -226,6 +235,9 @@ function updateEnemies() {
 // Update bullets
 function updateBullets() {
     for (let i = gameState.bullets.length - 1; i >= 0; i--) {
+        // Check if bullet still exists
+        if (!gameState.bullets[i]) continue;
+        
         gameState.bullets[i].update();
         
         // Remove off-screen bullets
@@ -235,9 +247,9 @@ function updateBullets() {
         }
         
         // Check bullet-enemy collisions
-        if (gameState.bullets[i].direction > 0) { // Player bullet
+        if (gameState.bullets[i] && gameState.bullets[i].direction > 0) { // Player bullet
             for (let j = gameState.enemies.length - 1; j >= 0; j--) {
-                if (checkCollision(gameState.bullets[i], gameState.enemies[j])) {
+                if (gameState.enemies[j] && gameState.bullets[i] && checkCollision(gameState.bullets[i], gameState.enemies[j])) {
                     // Hit enemy
                     gameState.explosions.push(new Explosion(
                         gameState.enemies[j].x + gameState.enemies[j].width/2,
@@ -256,9 +268,10 @@ function updateBullets() {
                     break;
                 }
             }
-        } else { // Enemy bullet
+        } else if (gameState.bullets[i] && gameState.bullets[i].direction < 0) { // Enemy bullet
+            let bulletRemoved = false;
             gameState.players.forEach(player => {
-                if (player.respawnTimer <= 0 && checkCollision(gameState.bullets[i], player)) {
+                if (!bulletRemoved && player && gameState.bullets[i] && player.respawnTimer <= 0 && checkCollision(gameState.bullets[i], player)) {
                     // Hit player
                     gameState.explosions.push(new Explosion(
                         player.x + player.width/2,
@@ -273,6 +286,7 @@ function updateBullets() {
                     }
                     
                     gameState.bullets.splice(i, 1);
+                    bulletRemoved = true;
                 }
             });
         }
