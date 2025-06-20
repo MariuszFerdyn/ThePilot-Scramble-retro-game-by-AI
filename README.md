@@ -30,12 +30,12 @@ https://thepilot-game.delightfulocean-d4ce577a.polandcentral.azurecontainerapps.
 ## How is it looks like
 
 ### Singleplayer
-<video src="media/GamePlay02.mp4" controls width="640" poster="media/Screenshot01.png">Your browser does not support the video tag.</video>
+[![Watch the Singleplayer Gameplay](media/Screenshot01.png)](media/GamePlay02.mp4)
 
 
 ### Multiplayer Screenshot
 ![Gameplay Screenshot](media/Screenshot01.png)
 
 ### Mulitplayer Video
-<video src="media/GamePlay01.mp4" controls width="640" poster="media/Screenshot01.png">Your browser does not support the video tag.</video>
+[![Watch the Multiplayer Gameplay](media/Screenshot01.png)](media/GamePlay01.mp4)
 
