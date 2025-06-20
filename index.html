@@ -152,7 +152,7 @@
         <div id="connectionPanel">
             <div style="margin-bottom: 15px; font-size: 18px;">🎮 RETRO COMMANDO NETWORK 🎮</div>
             <div>
-                <input type="text" id="serverUrl" placeholder="ws://localhost:3000" value="ws://localhost:3000">
+                <input type="text" id="serverUrl" placeholder="ws://localhost:3000" value="">
             </div>
             <div>
                 <input type="text" id="playerName" placeholder="Enter your name" maxlength="10">
@@ -871,7 +871,21 @@
         }
         
         // Initialize game
-        updateUI();
+        function initializeGame() {
+            // Set dynamic WebSocket URL based on current host
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const host = window.location.hostname;
+            const port = window.location.port || '3000';
+            const defaultServerUrl = `${protocol}//${host}:${port}`;
+            
+            document.getElementById('serverUrl').value = defaultServerUrl;
+            document.getElementById('serverUrl').placeholder = defaultServerUrl;
+            
+            updateUI();
+        }
+        
+        // Initialize on page load
+        initializeGame();
     </script>
 </body>
 </html>
