@@ -115,6 +115,89 @@
             line-height: 1.4;
         }
         
+        #mobileControls {
+            position: absolute;
+            bottom: -180px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            z-index: 100;
+        }
+        
+        .mobile-dpad {
+            position: relative;
+            width: 120px;
+            height: 120px;
+        }
+        
+        .mobile-btn {
+            position: absolute;
+            background: rgba(0, 255, 0, 0.3);
+            border: 2px solid #00ff00;
+            color: #00ff00;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            font-size: 16px;
+            user-select: none;
+            touch-action: manipulation;
+            cursor: pointer;
+        }
+        
+        .mobile-btn:active {
+            background: rgba(0, 255, 0, 0.6);
+        }
+        
+        .dpad-up {
+            top: 0;
+            left: 40px;
+            width: 40px;
+            height: 40px;
+        }
+        
+        .dpad-down {
+            bottom: 0;
+            left: 40px;
+            width: 40px;
+            height: 40px;
+        }
+        
+        .dpad-left {
+            left: 0;
+            top: 40px;
+            width: 40px;
+            height: 40px;
+        }
+        
+        .dpad-right {
+            right: 0;
+            top: 40px;
+            width: 40px;
+            height: 40px;
+        }
+        
+        .shoot-btn {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            font-size: 18px;
+        }
+        
+        @media (max-width: 768px) {
+            #instructions {
+                bottom: -120px;
+            }
+            
+            #mobileControls {
+                bottom: -200px;
+            }
+            
+            body {
+                padding-bottom: 220px;
+            }
+        }
+        
         #gameOver {
             position: absolute;
             top: 50%;
@@ -196,6 +279,16 @@
             <div><strong>HOST:</strong> Press R to restart game</div>
         </div>
         
+        <div id="mobileControls">
+            <div class="mobile-dpad">
+                <button class="mobile-btn dpad-up" id="btnUp">▲</button>
+                <button class="mobile-btn dpad-down" id="btnDown">▼</button>
+                <button class="mobile-btn dpad-left" id="btnLeft">◄</button>
+                <button class="mobile-btn dpad-right" id="btnRight">►</button>
+            </div>
+            <button class="mobile-btn shoot-btn" id="btnShoot">FIRE</button>
+        </div>
+        
         <div id="gameOver">
             <div id="gameOverText">GAME OVER</div>
             <div style="font-size: 16px; margin-top: 10px;">Host can press R to restart</div>
@@ -261,6 +354,51 @@
                 sendPlayerInput();
             }
         });
+        
+        // Mobile controls
+        function setupMobileControls() {
+            const mobileButtons = {
+                'btnUp': 'ArrowUp',
+                'btnDown': 'ArrowDown', 
+                'btnLeft': 'ArrowLeft',
+                'btnRight': 'ArrowRight',
+                'btnShoot': 'Space'
+            };
+            
+            Object.entries(mobileButtons).forEach(([btnId, keyCode]) => {
+                const btn = document.getElementById(btnId);
+                if (btn) {
+                    // Touch events
+                    btn.addEventListener('touchstart', (e) => {
+                        e.preventDefault();
+                        keys[keyCode] = true;
+                        if (isConnected) sendPlayerInput();
+                    });
+                    
+                    btn.addEventListener('touchend', (e) => {
+                        e.preventDefault();
+                        keys[keyCode] = false;
+                        if (isConnected) sendPlayerInput();
+                    });
+                    
+                    // Mouse events for desktop testing
+                    btn.addEventListener('mousedown', (e) => {
+                        e.preventDefault();
+                        keys[keyCode] = true;
+                        if (isConnected) sendPlayerInput();
+                    });
+                    
+                    btn.addEventListener('mouseup', (e) => {
+                        e.preventDefault();
+                        keys[keyCode] = false;
+                        if (isConnected) sendPlayerInput();
+                    });
+                    
+                    // Prevent context menu
+                    btn.addEventListener('contextmenu', (e) => e.preventDefault());
+                }
+            });
+        }
         
         // Network functions
         function connectToServer() {
@@ -731,7 +869,7 @@
             ctx.strokeStyle = '#004400';
             ctx.lineWidth = 1;
             
-            // Draw vertical lines
+            // Draw vertical lines (animated)
             for (let x = gameState.backgroundOffset; x < canvas.width; x += 40) {
                 ctx.beginPath();
                 ctx.moveTo(x, 0);
@@ -739,7 +877,7 @@
                 ctx.stroke();
             }
             
-            // Draw horizontal lines
+            // Draw horizontal lines (static)
             for (let y = 0; y < canvas.height; y += 40) {
                 ctx.beginPath();
                 ctx.moveTo(0, y);
@@ -910,6 +1048,7 @@
         
         // Initialize on page load
         initializeGame();
+        setupMobileControls();
     </script>
 </body>
 </html>
