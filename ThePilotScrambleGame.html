@@ -226,7 +226,10 @@
         let keys = {};
         let localEnemies = [];
         let localBullets = [];
+        let localPowerups = [];
+        let localExplosions = [];
         let enemySpawnTimer = 0;
+        let powerupSpawnTimer = 0;
         
         // Input handling
         document.addEventListener('keydown', (e) => {
@@ -321,11 +324,22 @@
                 speed: 5,
                 lives: 3,
                 score: 0,
-                shootCooldown: 0
+                shootCooldown: 0,
+                respawnTimer: 0
             };
             
             gameState.players = [localPlayer];
+            gameState.wave = 1;
+            gameState.gameOver = false;
+            localEnemies = [];
+            localBullets = [];
+            localPowerups = [];
+            localExplosions = [];
+            enemySpawnTimer = 0;
+            powerupSpawnTimer = 0;
+            
             hideConnectionPanel();
+            hideGameOver();
             updateUI();
         }
         
@@ -370,6 +384,8 @@
                     
                     if (gameState.gameOver) {
                         showGameOver();
+                    } else {
+                        hideGameOver();
                     }
                     break;
                     
@@ -408,10 +424,18 @@
             updateLocalPlayer();
             updateLocalEnemies();
             updateLocalBullets();
+            updateLocalPowerups();
+            updateLocalExplosions();
+            checkLocalGameOver();
         }
         
         function updateLocalPlayer() {
             if (!localPlayer || localPlayer.lives <= 0) return;
+            
+            if (localPlayer.respawnTimer > 0) {
+                localPlayer.respawnTimer--;
+                return;
+            }
             
             // Movement
             if (keys['ArrowLeft'] && localPlayer.x > 0) {
@@ -429,4 +453,406 @@
             
             // Shooting
             if (keys['Space'] && localPlayer.shootCooldown <= 0) {
-                local
+                localBullets.push({
+                    x: localPlayer.x + localPlayer.width,
+                    y: localPlayer.y + localPlayer.height/2,
+                    width: 8,
+                    height: 3,
+                    speed: 8,
+                    direction: 1,
+                    playerId: 'local'
+                });
+                localPlayer.shootCooldown = 10;
+            }
+            
+            if (localPlayer.shootCooldown > 0) {
+                localPlayer.shootCooldown--;
+            }
+        }
+        
+        function updateLocalEnemies() {
+            // Spawn enemies
+            enemySpawnTimer++;
+            if (enemySpawnTimer > 90 - (gameState.wave * 5)) {
+                localEnemies.push({
+                    x: canvas.width,
+                    y: Math.random() * (canvas.height - 100) + 50,
+                    width: 28,
+                    height: 24,
+                    speed: 2 + Math.random() * 2 + (gameState.wave * 0.2),
+                    shootTimer: Math.random() * 80,
+                    type: Math.random() < 0.8 ? 'normal' : 'fast'
+                });
+                enemySpawnTimer = 0;
+            }
+            
+            // Update enemies
+            for (let i = localEnemies.length - 1; i >= 0; i--) {
+                localEnemies[i].x -= localEnemies[i].speed;
+                
+                // Enemy shooting
+                localEnemies[i].shootTimer--;
+                if (localEnemies[i].shootTimer <= 0 && localEnemies[i].x < canvas.width - 100) {
+                    localBullets.push({
+                        x: localEnemies[i].x,
+                        y: localEnemies[i].y + localEnemies[i].height/2,
+                        width: 8,
+                        height: 3,
+                        speed: -6,
+                        direction: -1,
+                        playerId: 'enemy'
+                    });
+                    localEnemies[i].shootTimer = 60 + Math.random() * 60;
+                }
+                
+                // Remove off-screen enemies
+                if (localEnemies[i].x < -localEnemies[i].width) {
+                    localEnemies.splice(i, 1);
+                }
+            }
+            
+            // Check wave completion
+            if (localEnemies.length === 0 && enemySpawnTimer === 0) {
+                gameState.wave++;
+                updateUI();
+            }
+        }
+        
+        function updateLocalBullets() {
+            for (let i = localBullets.length - 1; i >= 0; i--) {
+                localBullets[i].x += localBullets[i].speed;
+                
+                // Remove off-screen bullets
+                if (localBullets[i].x < 0 || localBullets[i].x > canvas.width) {
+                    localBullets.splice(i, 1);
+                    continue;
+                }
+                
+                // Check collisions
+                if (localBullets[i].direction > 0) { // Player bullet
+                    for (let j = localEnemies.length - 1; j >= 0; j--) {
+                        if (checkCollision(localBullets[i], localEnemies[j])) {
+                            // Hit enemy
+                            localExplosions.push(createExplosion(
+                                localEnemies[j].x + localEnemies[j].width/2,
+                                localEnemies[j].y + localEnemies[j].height/2
+                            ));
+                            
+                            localPlayer.score += localEnemies[j].type === 'fast' ? 150 : 100;
+                            localEnemies.splice(j, 1);
+                            localBullets.splice(i, 1);
+                            updateUI();
+                            break;
+                        }
+                    }
+                } else { // Enemy bullet
+                    if (localPlayer.respawnTimer <= 0 && checkCollision(localBullets[i], localPlayer)) {
+                        // Hit player
+                        localExplosions.push(createExplosion(
+                            localPlayer.x + localPlayer.width/2,
+                            localPlayer.y + localPlayer.height/2
+                        ));
+                        
+                        localPlayer.lives--;
+                        if (localPlayer.lives > 0) {
+                            localPlayer.respawnTimer = 120;
+                            localPlayer.x = 100;
+                            localPlayer.y = 300;
+                        }
+                        
+                        localBullets.splice(i, 1);
+                        updateUI();
+                    }
+                }
+            }
+        }
+        
+        function updateLocalPowerups() {
+            // Spawn powerups
+            powerupSpawnTimer++;
+            if (powerupSpawnTimer > 400) {
+                localPowerups.push({
+                    x: canvas.width,
+                    y: Math.random() * (canvas.height - 100) + 50,
+                    width: 16,
+                    height: 16,
+                    speed: 2,
+                    type: Math.random() < 0.7 ? 'health' : 'points',
+                    pulse: 0
+                });
+                powerupSpawnTimer = 0;
+            }
+            
+            // Update powerups
+            for (let i = localPowerups.length - 1; i >= 0; i--) {
+                localPowerups[i].x -= localPowerups[i].speed;
+                localPowerups[i].pulse += 0.2;
+                
+                // Remove off-screen
+                if (localPowerups[i].x < -localPowerups[i].width) {
+                    localPowerups.splice(i, 1);
+                    continue;
+                }
+                
+                // Check player collision
+                if (localPlayer.respawnTimer <= 0 && checkCollision(localPlayer, localPowerups[i])) {
+                    if (localPowerups[i].type === 'health') {
+                        localPlayer.lives++;
+                    } else {
+                        localPlayer.score += 200;
+                    }
+                    localPowerups.splice(i, 1);
+                    updateUI();
+                }
+            }
+        }
+        
+        function updateLocalExplosions() {
+            for (let i = localExplosions.length - 1; i >= 0; i--) {
+                localExplosions[i].timer--;
+                localExplosions[i].particles.forEach(p => {
+                    p.x += p.vx;
+                    p.y += p.vy;
+                    p.life--;
+                    p.vx *= 0.98;
+                    p.vy *= 0.98;
+                });
+                
+                if (localExplosions[i].timer <= 0) {
+                    localExplosions.splice(i, 1);
+                }
+            }
+        }
+        
+        function checkLocalGameOver() {
+            if (localPlayer.lives <= 0) {
+                gameState.gameOver = true;
+                showGameOver();
+            }
+        }
+        
+        function restartLocalGame() {
+            if (!networkMode && localPlayer) {
+                localPlayer.x = 100;
+                localPlayer.y = 300;
+                localPlayer.lives = 3;
+                localPlayer.score = 0;
+                localPlayer.respawnTimer = 0;
+                gameState.wave = 1;
+                gameState.gameOver = false;
+                localEnemies = [];
+                localBullets = [];
+                localPowerups = [];
+                localExplosions = [];
+                enemySpawnTimer = 0;
+                powerupSpawnTimer = 0;
+                hideGameOver();
+                updateUI();
+            }
+        }
+        
+        function checkCollision(obj1, obj2) {
+            return obj1.x < obj2.x + obj2.width &&
+                   obj1.x + obj1.width > obj2.x &&
+                   obj1.y < obj2.y + obj2.height &&
+                   obj1.y + obj1.height > obj2.y;
+        }
+        
+        function createExplosion(x, y) {
+            const particles = [];
+            for (let i = 0; i < 6; i++) {
+                particles.push({
+                    x: x,
+                    y: y,
+                    vx: (Math.random() - 0.5) * 8,
+                    vy: (Math.random() - 0.5) * 8,
+                    life: 30,
+                    color: Math.random() > 0.5 ? '#ff4444' : '#ffaa00'
+                });
+            }
+            return {
+                x: x,
+                y: y,
+                timer: 30,
+                particles: particles
+            };
+        }
+        
+        function updateUI() {
+            document.getElementById('wave').textContent = gameState.wave;
+            document.getElementById('enemyCount').textContent = networkMode ? 
+                (gameState.enemies ? gameState.enemies.length : 0) : localEnemies.length;
+            document.getElementById('playerCount').textContent = networkMode ? 
+                (gameState.players ? gameState.players.length : 0) : 1;
+            
+            // Update player stats
+            const playersInfo = document.getElementById('playersInfo');
+            if (networkMode && gameState.players) {
+                playersInfo.innerHTML = gameState.players.map(p => 
+                    `<div class="player-name">${p.name}: ${p.score} pts, ${p.lives} lives</div>`
+                ).join('');
+            } else if (localPlayer) {
+                playersInfo.innerHTML = `<div class="player-name">${localPlayer.name}: ${localPlayer.score} pts, ${localPlayer.lives} lives</div>`;
+            }
+        }
+        
+        // Drawing functions
+        function drawBackground() {
+            gameState.backgroundOffset -= 1;
+            if (gameState.backgroundOffset <= -40) {
+                gameState.backgroundOffset = 0;
+            }
+            
+            ctx.strokeStyle = '#004400';
+            ctx.lineWidth = 1;
+            
+            for (let x = gameState.backgroundOffset; x < canvas.width; x += 40) {
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, canvas.height);
+                ctx.stroke();
+            }
+            
+            for (let y = 0; y < canvas.height; y += 40) {
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(canvas.width, y);
+                ctx.stroke();
+            }
+        }
+        
+        function drawPlayer(player) {
+            if (!player) return;
+            
+            // Don't draw if respawning and blinking
+            if (player.respawnTimer > 0 && Math.floor(player.respawnTimer / 10) % 2 === 0) {
+                return;
+            }
+            
+            const isLocalPlayer = player.id === playerId || player.id === 'local';
+            const color = isLocalPlayer ? '#00ff00' : '#ff00ff';
+            
+            // Draw player body
+            ctx.fillStyle = color;
+            ctx.fillRect(player.x, player.y, player.width, player.height);
+            
+            // Add player details
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(player.x + 2, player.y + 2, player.width - 4, player.height - 4);
+            
+            const innerColor = isLocalPlayer ? '#00aa00' : '#aa00aa';
+            ctx.fillStyle = innerColor;
+            ctx.fillRect(player.x + 4, player.y + 4, player.width - 8, player.height - 8);
+            
+            // Draw weapon
+            ctx.fillStyle = '#666666';
+            ctx.fillRect(player.x + player.width, player.y + player.height/2 - 2, 8, 4);
+            
+            // Draw player name
+            ctx.fillStyle = '#ffffff';
+            ctx.font = '10px Courier New';
+            ctx.textAlign = 'center';
+            ctx.fillText(player.name || player.id, player.x + player.width/2, player.y - 5);
+        }
+        
+        function drawBullet(bullet) {
+            const color = bullet.playerId === 'enemy' ? '#ff0000' : 
+                         bullet.playerId === playerId || bullet.playerId === 'local' ? '#ffff00' : '#ff00ff';
+            
+            ctx.fillStyle = color;
+            ctx.fillRect(bullet.x, bullet.y, bullet.width, bullet.height);
+            
+            // Add glow effect
+            ctx.shadowColor = color;
+            ctx.shadowBlur = 3;
+            ctx.fillRect(bullet.x, bullet.y, bullet.width, bullet.height);
+            ctx.shadowBlur = 0;
+        }
+        
+        function drawEnemy(enemy) {
+            const color = enemy.type === 'fast' ? '#ff8844' : '#ff4444';
+            
+            ctx.fillStyle = color;
+            ctx.fillRect(enemy.x, enemy.y, enemy.width, enemy.height);
+            
+            // Add details
+            ctx.fillStyle = enemy.type === 'fast' ? '#ffaa44' : '#ff0000';
+            ctx.fillRect(enemy.x + 2, enemy.y + 2, enemy.width - 4, enemy.height - 4);
+        }
+        
+        function drawPowerup(powerup) {
+            const color = powerup.type === 'health' ? '#00ffff' : '#ffff00';
+            
+            ctx.fillStyle = color;
+            ctx.globalAlpha = 0.8 + Math.sin(powerup.pulse) * 0.2;
+            ctx.fillRect(powerup.x, powerup.y, powerup.width, powerup.height);
+            ctx.globalAlpha = 1;
+            
+            // Draw symbol
+            ctx.fillStyle = '#ffffff';
+            if (powerup.type === 'health') {
+                ctx.fillRect(powerup.x + 6, powerup.y + 2, 4, 12);
+                ctx.fillRect(powerup.x + 2, powerup.y + 6, 12, 4);
+            } else {
+                ctx.fillRect(powerup.x + 4, powerup.y + 4, 8, 8);
+            }
+        }
+        
+        function drawExplosion(explosion) {
+            explosion.particles.forEach(p => {
+                if (p.life > 0) {
+                    ctx.fillStyle = p.color;
+                    ctx.globalAlpha = p.life / 30;
+                    ctx.fillRect(p.x, p.y, 4, 4);
+                }
+            });
+            ctx.globalAlpha = 1;
+        }
+        
+        // Main game loop
+        function gameLoop() {
+            // Clear canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw background
+            drawBackground();
+            
+            if (networkMode) {
+                // Network mode - draw server state
+                if (gameState.players) {
+                    gameState.players.forEach(player => drawPlayer(player));
+                }
+                if (gameState.bullets) {
+                    gameState.bullets.forEach(bullet => drawBullet(bullet));
+                }
+                if (gameState.enemies) {
+                    gameState.enemies.forEach(enemy => drawEnemy(enemy));
+                }
+                if (gameState.powerups) {
+                    gameState.powerups.forEach(powerup => drawPowerup(powerup));
+                }
+                if (gameState.explosions) {
+                    gameState.explosions.forEach(explosion => drawExplosion(explosion));
+                }
+            } else {
+                // Local mode - update and draw local state
+                updateLocalGame();
+                
+                if (localPlayer) {
+                    drawPlayer(localPlayer);
+                }
+                localBullets.forEach(bullet => drawBullet(bullet));
+                localEnemies.forEach(enemy => drawEnemy(enemy));
+                localPowerups.forEach(powerup => drawPowerup(powerup));
+                localExplosions.forEach(explosion => drawExplosion(explosion));
+            }
+            
+            requestAnimationFrame(gameLoop);
+        }
+        
+        // Initialize game
+        updateUI();
+        gameLoop();
+    </script>
+</body>
+</html>
