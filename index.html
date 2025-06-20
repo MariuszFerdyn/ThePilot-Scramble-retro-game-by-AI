@@ -116,24 +116,44 @@
         }
         
         #mobileControls {
+            display: none;
+        }
+        
+        .mobile-fire {
             position: fixed;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
+            left: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            font-size: 12px;
+            background: rgba(0, 255, 0, 0.3);
+            border: 2px solid #00ff00;
+            color: #00ff00;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            user-select: none;
+            touch-action: manipulation;
+            cursor: pointer;
             display: flex;
-            gap: 20px;
             align-items: center;
+            justify-content: center;
             z-index: 1000;
-            background: rgba(0, 0, 0, 0.8);
-            padding: 15px;
-            border-radius: 10px;
-            border: 1px solid #00ff00;
+        }
+        
+        .mobile-fire:active {
+            background: rgba(0, 255, 0, 0.6);
         }
         
         .mobile-dpad {
-            position: relative;
+            position: fixed;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
             width: 120px;
             height: 120px;
+            z-index: 1000;
         }
         
         .mobile-btn {
@@ -184,14 +204,6 @@
             height: 40px;
         }
         
-        .shoot-btn {
-            width: 80px;
-            height: 80px;
-            border-radius: 50%;
-            font-size: 14px;
-            position: relative;
-        }
-        
         #gameOver {
             position: absolute;
             top: 50%;
@@ -236,7 +248,7 @@
         <div id="connectionStatus" class="connecting">Disconnected</div>
         
         <div id="connectionPanel">
-            <div style="margin-bottom: 15px; font-size: 18px;">🎮 RETRO COMMANDO NETWORK 🎮</div>
+            <div style="margin-bottom: 15px; font-size: 18px;">RETRO COMMANDO NETWORK</div>
             <div>
                 <input type="text" id="serverUrl" placeholder="ws://localhost:3000" value="">
             </div>
@@ -244,10 +256,10 @@
                 <input type="text" id="playerName" placeholder="Enter your name" maxlength="10">
             </div>
             <div>
-                <button onclick="connectToServer()">🌐 CONNECT TO SERVER</button>
+                <button onclick="connectToServer()">CONNECT TO SERVER</button>
             </div>
             <div>
-                <button onclick="startLocalGame()">🎯 LOCAL SINGLE PLAYER</button>
+                <button onclick="startLocalGame()">LOCAL SINGLE PLAYER</button>
             </div>
             <div class="setup-instructions">
                 Source Code: <a href="https://github.com/MariuszFerdyn/ThePilot-Scramble-retro-game-by-AI" target="_blank">GitHub Repository</a><br>
@@ -273,22 +285,22 @@
             <div><strong>HOST:</strong> Press R to restart game</div>
         </div>
         
-        <div id="mobileControls">
-        </div>
-        
-        <button class="mobile-fire" id="btnShoot">FIRE</button>
-        
-        <div class="mobile-dpad">
-            <button class="mobile-btn dpad-up" id="btnUp">▲</button>
-            <button class="mobile-btn dpad-down" id="btnDown">▼</button>
-            <button class="mobile-btn dpad-left" id="btnLeft">◄</button>
-            <button class="mobile-btn dpad-right" id="btnRight">►</button>
-        </div>
-        
         <div id="gameOver">
             <div id="gameOverText">GAME OVER</div>
             <div style="font-size: 16px; margin-top: 10px;">Host can press R to restart</div>
         </div>
+    </div>
+
+    <div id="mobileControls">
+    </div>
+    
+    <button class="mobile-fire" id="btnShoot">FIRE</button>
+    
+    <div class="mobile-dpad">
+        <button class="mobile-btn dpad-up" id="btnUp">▲</button>
+        <button class="mobile-btn dpad-down" id="btnDown">▼</button>
+        <button class="mobile-btn dpad-left" id="btnLeft">◄</button>
+        <button class="mobile-btn dpad-right" id="btnRight">►</button>
     </div>
 
     <script>
@@ -900,10 +912,6 @@
             const isLocalPlayer = fullPlayer.id === playerId || fullPlayer.id === 'local';
             const color = isLocalPlayer ? '#00ff00' : '#ff00ff';
             
-            // Draw player body
-            ctx.fillStyle = color;
-            ctx.fillRect(fullPlayer.x, fullPlayer.y, fullPlayer.width, fullPlayer.height);
-            
             // Add player details
             ctx.fillStyle = '#ffffff';
             ctx.fillRect(fullPlayer.x + 2, fullPlayer.y + 2, fullPlayer.width - 4, fullPlayer.height - 4);
@@ -977,6 +985,30 @@
             ctx.globalAlpha = 1;
         }
         
+        // Initialize game
+        function initializeGame() {
+            // Set dynamic WebSocket URL based on current host
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const host = window.location.hostname;
+            
+            // Use current port if it exists, otherwise omit port for standard ports
+            let port = window.location.port;
+            let defaultServerUrl;
+            
+            if (port) {
+                // Port is explicitly specified in URL
+                defaultServerUrl = `${protocol}//${host}:${port}`;
+            } else {
+                // No port specified - use clean URL without port
+                defaultServerUrl = `${protocol}//${host}`;
+            }
+            
+            document.getElementById('serverUrl').value = defaultServerUrl;
+            document.getElementById('serverUrl').placeholder = defaultServerUrl;
+            
+            updateUI();
+        }
+        
         // Main game loop
         function gameLoop() {
             // Clear canvas
@@ -1016,30 +1048,6 @@
             }
             
             requestAnimationFrame(gameLoop);
-        }
-        
-        // Initialize game
-        function initializeGame() {
-            // Set dynamic WebSocket URL based on current host
-            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-            const host = window.location.hostname;
-            
-            // Use current port if it exists, otherwise omit port for standard ports
-            let port = window.location.port;
-            let defaultServerUrl;
-            
-            if (port) {
-                // Port is explicitly specified in URL
-                defaultServerUrl = `${protocol}//${host}:${port}`;
-            } else {
-                // No port specified - use clean URL without port
-                defaultServerUrl = `${protocol}//${host}`;
-            }
-            
-            document.getElementById('serverUrl').value = defaultServerUrl;
-            document.getElementById('serverUrl').placeholder = defaultServerUrl;
-            
-            updateUI();
         }
         
         // Initialize on page load
