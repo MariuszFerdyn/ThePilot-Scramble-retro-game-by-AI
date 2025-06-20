@@ -32,10 +32,14 @@ https://thepilot-game.delightfulocean-d4ce577a.polandcentral.azurecontainerapps.
 ### Singleplayer
 [![Watch the Singleplayer Gameplay](media/Screenshot01.png)](media/GamePlay02.mp4)
 
+[▶️ Open Singleplayer Video as RAW file](media/GamePlay02.mp4)
+
 
 ### Multiplayer Screenshot
 ![Gameplay Screenshot](media/Screenshot01.png)
 
 ### Mulitplayer Video
 [![Watch the Multiplayer Gameplay](media/Screenshot01.png)](media/GamePlay01.mp4)
+
+[▶️ Open Multiplayer Video as RAW file](media/GamePlay01.mp4)
 
