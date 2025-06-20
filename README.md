@@ -24,3 +24,18 @@ The entire project was written using AI without any hand code modification.
 Step by step: https://claude.ai/public/artifacts/fb961d15-8a76-4b04-881e-3768a39ce714
 
 # For limited time you can play game here
+
+https://thepilot-game.delightfulocean-d4ce577a.polandcentral.azurecontainerapps.io/
+
+## How is it looks like
+
+### Singleplayer
+<video src="media/GamePlay02.mp4" controls width="640" poster="media/Screenshot01.png">Your browser does not support the video tag.</video>
+
+
+### Multiplayer Screenshot
+![Gameplay Screenshot](media/Screenshot01.png)
+
+### Mulitplayer Video
+<video src="media/GamePlay01.mp4" controls width="640" poster="media/Screenshot01.png">Your browser does not support the video tag.</video>
+
