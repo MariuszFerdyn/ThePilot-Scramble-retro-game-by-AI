@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Retro Commando - Network Multiplayer</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: #000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            font-family: 'Courier New', monospace;
+            overflow: hidden;
+        }
+        
+        #gameContainer {
+            border: 4px solid #00ff00;
+            box-shadow: 0 0 20px #00ff00;
+            position: relative;
+        }
+        
+        canvas {
+            display: block;
+            background: linear-gradient(180deg, #001122 0%, #003366 50%, #002244 100%);
+        }
+        
+        #connectionStatus {
+            position: absolute;
+            top: -40px;
+            left: 0;
+            right: 0;
+            text-align: center;
+            color: #ff0000;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        
+        #connectionStatus.connected { color: #00ff00; }
+        #connectionStatus.connecting { color: #ffff00; }
+        
+        #ui {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: #00ff00;
+            font-size: 16px;
+            font-weight: bold;
+            text-shadow: 2px 2px #000;
+            z-index: 100;
+        }
+        
+        #playerStats {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            color: #00ff00;
+            font-size: 14px;
+            font-weight: bold;
+            text-shadow: 2px 2px #000;
+            z-index: 100;
+            text-align: right;
+            max-width: 200px;
+        }
+        
+        #connectionPanel {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.9);
+            border: 2px solid #00ff00;
+            padding: 20px;
+            text-align: center;
+            color: #00ff00;
+            z-index: 200;
+        }
+        
+        #connectionPanel input {
+            background: #000;
+            border: 1px solid #00ff00;
+            color: #00ff00;
+            padding: 8px;
+            margin: 5px;
+            font-family: 'Courier New', monospace;
+            width: 200px;
+        }
+        
+        #connectionPanel button {
+            background: #003300;
+            border: 1px solid #00ff00;
+            color: #00ff00;
+            padding: 10px 20px;
+            margin: 5px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+        }
+        
+        #connectionPanel button:hover {
+            background: #006600;
+        }
+        
+        #instructions {
+            position: absolute;
+            bottom: -100px;
+            left: 0;
+            right: 0;
+            color: #00ff00;
+            text-align: center;
+            font-size: 12px;
+            line-height: 1.4;
+        }
+        
+        #gameOver {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #ff0000;
+            font-size: 24px;
+            text-align: center;
+            background: rgba(0,0,0,0.9);
+            padding: 20px;
+            border: 2px solid #ff0000;
+            display: none;
+            z-index: 150;
+        }
+        
+        .player-name {
+            font-size: 12px;
+            margin-bottom: 2px;
+        }
+        
+        .setup-instructions {
+            font-size: 10px;
+            color: #888;
+            margin-top: 15px;
+            line-height: 1.3;
+        }
+        
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <div id="connectionStatus" class="connecting">Disconnected</div>
+        
+        <div id="connectionPanel">
+            <div style="margin-bottom: 15px; font-size: 18px;">🎮 RETRO COMMANDO NETWORK 🎮</div>
+            <div>
+                <input type="text" id="serverUrl" placeholder="ws://localhost:3000" value="ws://localhost:3000">
+            </div>
+            <div>
+                <input type="text" id="playerName" placeholder="Enter your name" maxlength="10">
+            </div>
+            <div>
+                <button onclick="connectToServer()">🌐 CONNECT TO SERVER</button>
+            </div>
+            <div>
+                <button onclick="startLocalGame()">🎯 LOCAL SINGLE PLAYER</button>
+            </div>
+            <div class="setup-instructions">
+                <strong>Server Setup:</strong><br>
+                1. Install Node.js<br>
+                2. Run: npm install ws express<br>
+                3. Save server code as server.js<br>
+                4. Run: node server.js<br>
+                5. Connect multiple players!
+            </div>
+        </div>
+        
+        <canvas id="gameCanvas" width="1000" height="600"></canvas>
+        
+        <div id="ui">
+            <div>WAVE: <span id="wave">1</span></div>
+            <div>ENEMIES: <span id="enemyCount">0</span></div>
+            <div>PLAYERS: <span id="playerCount">1</span></div>
+        </div>
+        
+        <div id="playerStats">
+            <div id="playersInfo"></div>
+        </div>
+        
+        <div id="instructions">
+            <div><strong>CONTROLS:</strong> Arrow Keys: Move | Spacebar: Shoot</div>
+            <div><strong>MULTIPLAYER:</strong> Work together to survive waves!</div>
+            <div><strong>HOST:</strong> Press R to restart game</div>
+        </div>
+        
+        <div id="gameOver">
+            <div id="gameOverText">GAME OVER</div>
+            <div style="font-size: 16px; margin-top: 10px;">Host can press R to restart</div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        // Network variables
+        let socket = null;
+        let isConnected = false;
+        let playerId = null;
+        let playerName = '';
+        let isHost = false;
+        let networkMode = false;
+        
+        // Game state
+        let gameState = {
+            wave: 1,
+            gameOver: false,
+            backgroundOffset: 0,
+            players: [],
+            enemies: [],
+            bullets: [],
+            powerups: [],
+            explosions: []
+        };
+        
+        // Local player for single player mode
+        let localPlayer = null;
+        let keys = {};
+        let localEnemies = [];
+        let localBullets = [];
+        let enemySpawnTimer = 0;
+        
+        // Input handling
+        document.addEventListener('keydown', (e) => {
+            keys[e.code] = true;
+            
+            if (e.code === 'KeyR' && isHost) {
+                sendGameEvent('restart');
+            } else if (e.code === 'KeyR' && !networkMode) {
+                restartLocalGame();
+            }
+            
+            // Send input to server if connected
+            if (isConnected) {
+                sendPlayerInput();
+            }
+        });
+        
+        document.addEventListener('keyup', (e) => {
+            keys[e.code] = false;
+            
+            // Send input to server if connected
+            if (isConnected) {
+                sendPlayerInput();
+            }
+        });
+        
+        // Network functions
+        function connectToServer() {
+            const serverUrl = document.getElementById('serverUrl').value;
+            playerName = document.getElementById('playerName').value || 'Player';
+            
+            if (!serverUrl) {
+                alert('Please enter server URL');
+                return;
+            }
+            
+            updateConnectionStatus('connecting', 'Connecting...');
+            
+            try {
+                socket = new WebSocket(serverUrl);
+                
+                socket.onopen = () => {
+                    isConnected = true;
+                    networkMode = true;
+                    updateConnectionStatus('connected', `Connected as ${playerName}`);
+                    
+                    // Send join message
+                    socket.send(JSON.stringify({
+                        type: 'join',
+                        playerName: playerName
+                    }));
+                    
+                    hideConnectionPanel();
+                };
+                
+                socket.onmessage = (event) => {
+                    const data = JSON.parse(event.data);
+                    handleServerMessage(data);
+                };
+                
+                socket.onclose = () => {
+                    isConnected = false;
+                    networkMode = false;
+                    updateConnectionStatus('disconnected', 'Disconnected from server');
+                    showConnectionPanel();
+                };
+                
+                socket.onerror = (error) => {
+                    console.error('WebSocket error:', error);
+                    updateConnectionStatus('disconnected', 'Connection failed');
+                };
+                
+            } catch (error) {
+                console.error('Failed to connect:', error);
+                updateConnectionStatus('disconnected', 'Connection failed');
+            }
+        }
+        
+        function startLocalGame() {
+            networkMode = false;
+            isConnected = false;
+            playerId = 'local';
+            
+            // Create local player
+            localPlayer = {
+                id: 'local',
+                name: playerName || 'Local Player',
+                x: 100,
+                y: 300,
+                width: 24,
+                height: 32,
+                speed: 5,
+                lives: 3,
+                score: 0,
+                shootCooldown: 0
+            };
+            
+            gameState.players = [localPlayer];
+            hideConnectionPanel();
+            updateUI();
+        }
+        
+        function sendPlayerInput() {
+            if (!socket || !isConnected) return;
+            
+            const input = {
+                left: keys['ArrowLeft'] || false,
+                right: keys['ArrowRight'] || false,
+                up: keys['ArrowUp'] || false,
+                down: keys['ArrowDown'] || false,
+                shoot: keys['Space'] || false
+            };
+            
+            socket.send(JSON.stringify({
+                type: 'input',
+                input: input
+            }));
+        }
+        
+        function sendGameEvent(eventType, data = {}) {
+            if (!socket || !isConnected) return;
+            
+            socket.send(JSON.stringify({
+                type: 'gameEvent',
+                eventType: eventType,
+                data: data
+            }));
+        }
+        
+        function handleServerMessage(data) {
+            switch (data.type) {
+                case 'playerJoined':
+                    playerId = data.playerId;
+                    isHost = data.isHost;
+                    updateConnectionStatus('connected', `Connected as ${playerName} ${isHost ? '(Host)' : ''}`);
+                    break;
+                    
+                case 'gameState':
+                    gameState = data.gameState;
+                    updateUI();
+                    
+                    if (gameState.gameOver) {
+                        showGameOver();
+                    }
+                    break;
+                    
+                case 'playerLeft':
+                    // Player disconnected
+                    break;
+            }
+        }
+        
+        function updateConnectionStatus(status, text) {
+            const statusEl = document.getElementById('connectionStatus');
+            statusEl.className = status;
+            statusEl.textContent = text;
+        }
+        
+        function showConnectionPanel() {
+            document.getElementById('connectionPanel').classList.remove('hidden');
+        }
+        
+        function hideConnectionPanel() {
+            document.getElementById('connectionPanel').classList.add('hidden');
+        }
+        
+        function showGameOver() {
+            document.getElementById('gameOver').style.display = 'block';
+        }
+        
+        function hideGameOver() {
+            document.getElementById('gameOver').style.display = 'none';
+        }
+        
+        // Local game functions (for single player mode)
+        function updateLocalGame() {
+            if (networkMode) return;
+            
+            updateLocalPlayer();
+            updateLocalEnemies();
+            updateLocalBullets();
+        }
+        
+        function updateLocalPlayer() {
+            if (!localPlayer || localPlayer.lives <= 0) return;
+            
+            // Movement
+            if (keys['ArrowLeft'] && localPlayer.x > 0) {
+                localPlayer.x -= localPlayer.speed;
+            }
+            if (keys['ArrowRight'] && localPlayer.x < canvas.width - localPlayer.width) {
+                localPlayer.x += localPlayer.speed;
+            }
+            if (keys['ArrowUp'] && localPlayer.y > 0) {
+                localPlayer.y -= localPlayer.speed;
+            }
+            if (keys['ArrowDown'] && localPlayer.y < canvas.height - localPlayer.height) {
+                localPlayer.y += localPlayer.speed;
+            }
+            
+            // Shooting
+            if (keys['Space'] && localPlayer.shootCooldown <= 0) {
+                local
