@@ -716,14 +716,17 @@
         
         // Drawing functions
         function drawBackground() {
+            // Update background offset for animation
             gameState.backgroundOffset -= 1;
             if (gameState.backgroundOffset <= -40) {
                 gameState.backgroundOffset = 0;
             }
             
+            // Set line style
             ctx.strokeStyle = '#004400';
             ctx.lineWidth = 1;
             
+            // Draw vertical lines
             for (let x = gameState.backgroundOffset; x < canvas.width; x += 40) {
                 ctx.beginPath();
                 ctx.moveTo(x, 0);
@@ -731,6 +734,7 @@
                 ctx.stroke();
             }
             
+            // Draw horizontal lines
             for (let y = 0; y < canvas.height; y += 40) {
                 ctx.beginPath();
                 ctx.moveTo(0, y);
