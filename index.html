@@ -737,35 +737,42 @@
         function drawPlayer(player) {
             if (!player) return;
             
+            // Ensure player has required properties (for network mode compatibility)
+            const fullPlayer = {
+                ...player,
+                width: player.width || 24,
+                height: player.height || 32
+            };
+            
             // Don't draw if respawning and blinking
-            if (player.respawnTimer > 0 && Math.floor(player.respawnTimer / 10) % 2 === 0) {
+            if (fullPlayer.respawnTimer > 0 && Math.floor(fullPlayer.respawnTimer / 10) % 2 === 0) {
                 return;
             }
             
-            const isLocalPlayer = player.id === playerId || player.id === 'local';
+            const isLocalPlayer = fullPlayer.id === playerId || fullPlayer.id === 'local';
             const color = isLocalPlayer ? '#00ff00' : '#ff00ff';
             
             // Draw player body
             ctx.fillStyle = color;
-            ctx.fillRect(player.x, player.y, player.width, player.height);
+            ctx.fillRect(fullPlayer.x, fullPlayer.y, fullPlayer.width, fullPlayer.height);
             
             // Add player details
             ctx.fillStyle = '#ffffff';
-            ctx.fillRect(player.x + 2, player.y + 2, player.width - 4, player.height - 4);
+            ctx.fillRect(fullPlayer.x + 2, fullPlayer.y + 2, fullPlayer.width - 4, fullPlayer.height - 4);
             
             const innerColor = isLocalPlayer ? '#00aa00' : '#aa00aa';
             ctx.fillStyle = innerColor;
-            ctx.fillRect(player.x + 4, player.y + 4, player.width - 8, player.height - 8);
+            ctx.fillRect(fullPlayer.x + 4, fullPlayer.y + 4, fullPlayer.width - 8, fullPlayer.height - 8);
             
             // Draw weapon
             ctx.fillStyle = '#666666';
-            ctx.fillRect(player.x + player.width, player.y + player.height/2 - 2, 8, 4);
+            ctx.fillRect(fullPlayer.x + fullPlayer.width, fullPlayer.y + fullPlayer.height/2 - 2, 8, 4);
             
             // Draw player name
             ctx.fillStyle = '#ffffff';
             ctx.font = '10px Courier New';
             ctx.textAlign = 'center';
-            ctx.fillText(player.name || player.id, player.x + player.width/2, player.y - 5);
+            ctx.fillText(fullPlayer.name || fullPlayer.id, fullPlayer.x + fullPlayer.width/2, fullPlayer.y - 5);
         }
         
         function drawBullet(bullet) {
