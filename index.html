@@ -142,15 +142,6 @@
             line-height: 1.3;
         }
         
-        .setup-instructions a {
-            color: #00ff00;
-            text-decoration: underline;
-        }
-        
-        .setup-instructions a:hover {
-            color: #00ffff;
-        }
-        
         .hidden { display: none; }
     </style>
 </head>
@@ -173,8 +164,12 @@
                 <button onclick="startLocalGame()">🎯 LOCAL SINGLE PLAYER</button>
             </div>
             <div class="setup-instructions">
-                Source Code: <a href="https://github.com/MariuszFerdyn/ThePilot-Scramble-retro-game-by-AI" target="_blank">GitHub Repository</a><br>
-                Blog: <a href="https://rzetelnekursy.pl/" target="_blank">rzetelnekursy.pl</a>
+                <strong>Server Setup:</strong><br>
+                1. Install Node.js<br>
+                2. Run: npm install ws express<br>
+                3. Save server code as server.js<br>
+                4. Run: node server.js<br>
+                5. Connect multiple players!
             </div>
         </div>
         
@@ -716,22 +711,14 @@
         
         // Drawing functions
         function drawBackground() {
-            // Initialize backgroundOffset if it's NaN or undefined (network mode fix)
-            if (isNaN(gameState.backgroundOffset) || gameState.backgroundOffset === undefined) {
-                gameState.backgroundOffset = 0;
-            }
-            
-            // Update background offset for animation
             gameState.backgroundOffset -= 1;
             if (gameState.backgroundOffset <= -40) {
                 gameState.backgroundOffset = 0;
             }
             
-            // Set line style
             ctx.strokeStyle = '#004400';
             ctx.lineWidth = 1;
             
-            // Draw vertical lines
             for (let x = gameState.backgroundOffset; x < canvas.width; x += 40) {
                 ctx.beginPath();
                 ctx.moveTo(x, 0);
@@ -739,7 +726,6 @@
                 ctx.stroke();
             }
             
-            // Draw horizontal lines
             for (let y = 0; y < canvas.height; y += 40) {
                 ctx.beginPath();
                 ctx.moveTo(0, y);
