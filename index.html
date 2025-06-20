@@ -116,14 +116,18 @@
         }
         
         #mobileControls {
-            position: absolute;
-            bottom: -180px;
+            position: fixed;
+            bottom: 20px;
             left: 50%;
             transform: translateX(-50%);
             display: flex;
             gap: 20px;
             align-items: center;
-            z-index: 100;
+            z-index: 1000;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px;
+            border-radius: 10px;
+            border: 1px solid #00ff00;
         }
         
         .mobile-dpad {
@@ -143,6 +147,9 @@
             user-select: none;
             touch-action: manipulation;
             cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
         
         .mobile-btn:active {
@@ -181,21 +188,8 @@
             width: 80px;
             height: 80px;
             border-radius: 50%;
-            font-size: 18px;
-        }
-        
-        @media (max-width: 768px) {
-            #instructions {
-                bottom: -120px;
-            }
-            
-            #mobileControls {
-                bottom: -200px;
-            }
-            
-            body {
-                padding-bottom: 220px;
-            }
+            font-size: 14px;
+            position: relative;
         }
         
         #gameOver {
