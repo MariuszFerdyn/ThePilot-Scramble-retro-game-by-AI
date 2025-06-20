@@ -309,24 +309,24 @@
         }
         
         function startLocalGame() {
-            networkMode = false;
-            isConnected = false;
+            console.log('Starting local game...');
+            networkMode = false; 
+            isConnected = false; 
             playerId = 'local';
-            
-            // Create local player
-            localPlayer = {
-                id: 'local',
-                name: playerName || 'Local Player',
-                x: 100,
-                y: 300,
-                width: 24,
-                height: 32,
-                speed: 5,
-                lives: 3,
-                score: 0,
-                shootCooldown: 0,
-                respawnTimer: 0
+            localPlayer = { 
+                id: 'local', name: playerName || 'Local Player', 
+                x: 100, y: 300, width: 24, height: 32, speed: 5, 
+                lives: 3, score: 0, shootCooldown: 0, respawnTimer: 0 
             };
+            gameState = { wave: 1, gameOver: false, backgroundOffset: 0, players: [localPlayer] };
+            localEnemies = []; localBullets = []; localPowerups = []; localExplosions = [];
+            enemySpawnTimer = 0; powerupSpawnTimer = 0;
+            hideConnectionPanel(); hideGameOver(); updateUI();
+            console.log('Local game started, player:', localPlayer);
+            
+            // ADD THIS LINE:
+            gameLoop();
+        }
             
             gameState.players = [localPlayer];
             gameState.wave = 1;
