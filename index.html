@@ -716,6 +716,11 @@
         
         // Drawing functions
         function drawBackground() {
+            // Initialize backgroundOffset if it's NaN or undefined (network mode fix)
+            if (isNaN(gameState.backgroundOffset) || gameState.backgroundOffset === undefined) {
+                gameState.backgroundOffset = 0;
+            }
+            
             // Update background offset for animation
             gameState.backgroundOffset -= 1;
             if (gameState.backgroundOffset <= -40) {
